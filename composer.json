@@ -1,0 +1,13 @@
+{
+    "require": {
+        "greenlion/php-sql-parser": "^4.0"
+    },
+    "require-dev": {
+        "php5-sqlite": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dnoegel\\DatabaseInspection\\": "src/"
+        }
+    }
+}

@@ -1,50 +1,50 @@
-# DsnDatabaseInspection
-Will decorate the Shopware DB connection (not DBAL, yet) and log all queries, which might have possible SQL injections in it.
+# DatabaseInspection
+Will decorate the PDO connection of an application and log all queries, which might have possible SQL injections in it.
 
 # How does it work?
-Every query is intercepted and parsed. In the parsed query, hardcoded constant values (e.g. `SELECT * FROM s_articles_prices WHERE pricegroup = 'EK'`)
+Every query is intercepted and parsed. In the parsed query, hardcoded constant values (e.g. `SELECT * FROM my_table WHERE value = 'hi'`)
 are found and declared as possible SQL injections.
 
-You will find those queries with a stack trace, request infos and more details in the /sql/problems folder of your shopware installation.
+You will find those queries with a stack trace, request infos and more details in a output folder, that you can define.
 
 # How do I use it?
-In the application, you want to test, find the place, where your PDO connection is created. Most PHP software uses PDO,
+In the application you want to test, find the place, where your PDO connection is created. Most PHP software uses PDO,
 also ORMs like Doctrine makes use of it.
 
-## Shopware
-Find the file `Zend_Db_Adapter_Pdo_Abstract` in `/engine/Library/Zend/Db/Adapter/Pdo/Abstract.php`. In the method `_connect`
-the PDO connection is create. Replace
+## Example
+Given you have an application that uses PDO like this:
 
 ```
 $this->_connection = new PDO(
     $dsn,
-    $this->_config['username'],
-    $this->_config['password'],
-    $this->_config['driver_options']
+    $username,
+    $password,
+    $options
 );
 ```
 
 with this:
 
 ```
-require_once __DIR__ . '/../../../../../Shopware/Plugins/Local/Frontend/DsnDatabaseInspection/vendor/autoload.php';
 use \\Dnoegel\\DatabaseInspection\\PDOInspectionDecorator;
 
 try {
     $this->_connection = new PDOInspectionDecorator(
         new PDO(
             $dsn,
-            $this->_config['username'],
-            $this->_config['password'],
-            $this->_config['driver_options']
+            $username,
+            $password,
+            $options
         )
     );
 
     $this->_connection->setProblemInspector(new \\Dnoegel\\DatabaseInspection\\SqlProblemInspector(
-        new \\Dnoegel\\DatabaseInspection\\Storage\\JsonStorage(), new \\Dnoegel\\DatabaseInspection\\RouteProvider\\ShopwareRouteProvider(), new \\Dnoegel\\DatabaseInspection\\Trace\\DebugTrace(), true
+            new \\Dnoegel\\DatabaseInspection\\Storage\\JsonStorage('/tmp/sql_inspector_output'),
     ));
 
 ```
+
+you can decorate your PDO connection.
 
 So this is actually three steps:
 
@@ -55,21 +55,18 @@ So this is actually three steps:
  to the position you like.
 
 # Whitelisting
-If you checked a query and think, that its ok (e.g. values are casted to int beforehands), you can move them to the /sql/whitelist folder
-of your shopware installation. The script will then not bother you any more.
+If you checked a query and think, that its ok (e.g. values are casted to int beforehands), you can move them to the `whitelist` folder
+of your output folder. The script will then not bother you any more.
 
-The whitelisting will figure out the constant parts of the query, so e.g. `SELECT * FROM s_articles_prices WHERE pricegroup = 'EK'`
-and `SELECT * FROM s_articles_prices WHERE pricegroup = 'H'` will be the same query from a technical perspective.
-
-# It marks to many queries as "problems"!
-No, it doesn't, even for casted integers hardcoding them into the query is not actually best practice.
+The whitelisting will figure out the constant parts of the query, so e.g. `SELECT * FROM my_table WHERE value = 'hi'`
+and `SELECT * FROM my_table WHERE value = 'another string'` will be the same query from a technical perspective.
 
 # Creating the issue inspector:
 
 ```
 $parser = new \\Dnoegel\\DatabaseInspection\\SqlProblemInspector(
     new \\Dnoegel\\DatabaseInspection\\Storage\\JsonStorage(),
-    new \\Dnoegel\\DatabaseInspection\\RouteProvider\\ShopwareRouteProvider(),
+    new \\Dnoegel\\DatabaseInspection\\RouteProvider\\RouteProvider(),
     new \\Dnoegel\\DatabaseInspection\\Trace\\DebugTrace(),
     true
 )
@@ -78,11 +75,6 @@ $parser = new \\Dnoegel\\DatabaseInspection\\SqlProblemInspector(
 The last parameter will decide, if all findings are saved to the `problem` document or if the script should try to separate
 "issues" and "problems". "Issues" are findings, that only consist of scalar values, which could still be an SQL injection,
 so this is by no means a "all-clear" - just a "check the problems first".
-
-# Known issues
-There are things like "virtual prepare statement" where some handlers will take care of putting the variables into the right place
-of the query. In the connection those queries will look like possible SQL injections - but I'd say that is a bit by design
-and using prepared statements on the database should always be prefered over software prepared statements.
 
 # Reading the "problem" file
 Each problem file provides the following info:
@@ -224,3 +216,7 @@ with other hardcoded values
     }
 }
 ```
+
+# Notice
+This is by no mean a security layer. **Do not** use it as such. Its a development tool and a proof of concept for parsing
+SQL queries in order to find constant query parts that might be replaced with prepared statements. Do not use it in production.

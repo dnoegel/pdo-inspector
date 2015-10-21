@@ -50,6 +50,12 @@ class PDOInspectionDecorator extends \PDO
         return call_user_func_array(array($this->innerPDO, 'query'), $args);
     }
 
+    public function exec($statement)
+    {
+        $this->sqlParser->inspect($statement);
+
+        return $this->innerPDO->exec($statement);
+    }
 
     #
     # Overrides of the original PDO object
@@ -79,11 +85,6 @@ class PDOInspectionDecorator extends \PDO
     public function setAttribute($attribute, $value)
     {
         $this->innerPDO->setAttribute($attribute, $value);
-    }
-
-    public function exec($statement)
-    {
-        return $this->innerPDO->exec($statement);
     }
 
     public function lastInsertId($name = null)

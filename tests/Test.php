@@ -37,7 +37,7 @@ class Test extends PHPUnit_Framework_TestCase
         return $this->pdo;
     }
 
-    public function testThis()
+    public function testSimpleQuery()
     {
         $sql = <<<EOF
 CREATE TABLE test
@@ -51,10 +51,8 @@ EOF;
 
         $sql = 'INSERT INTO "test" (`name`) VALUES("Test")';
         $this->getPDO()->prepare($sql)->execute();
-echo "<pre>";
-print_r($this->storage->getDocument('problem', '42dec3f3d68a119b4faef11cd2b6afe3'));
-exit();
-        $this->assertEquals($sql, $this->storage->getDocument('problem', '42dec3f3d68a119b4faef11cd2b6afe3')['sql']);
+        
+        $this->assertEquals($sql, $this->storage->getDocument('problem', '0e5eafe0c122849f9dcf062b7c2aee52')['sql']);
         
     }
 }

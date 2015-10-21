@@ -1,9 +1,10 @@
 {
+    "name": "dnoegel/pdo-inspector",
+    "description": "Inspect PDO queries for possible SQL injections",
+    "type": "library",
     "require": {
-        "greenlion/php-sql-parser": "^4.0"
-    },
-    "require-dev": {
-        "php5-sqlite": "*"
+        "greenlion/php-sql-parser": "^4.0",
+        "symfony/yaml": "2.7.*"
     },
     "autoload": {
         "psr-4": {

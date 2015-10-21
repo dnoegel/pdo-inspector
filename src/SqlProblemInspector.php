@@ -154,30 +154,44 @@ class SqlProblemInspector
 
 
     /**
-     * Normalize the query, so that the same query with other values will get the same hash
+     * Normalize the query, so that the same query with other values will get the same hash.
+     * Once a constant expression was detected in a certain nesting level, all "base_expr"
+     * from this level to the top will be NORMALIZED, in order to remove the concrete constant
+     * value from the SQL hash.
+     * The internal flag "tainted" represents this information.
      *
      * @param $array
      * @return mixed
      */
     private function recursiveNormalizeQuery(&$array)
     {
+        $tainted = false;
 
         foreach ($array as $key => &$value) {
             if (is_array($value)) {
-                $this->recursiveNormalizeQuery($value);
+                $tainted = $this->recursiveNormalizeQuery($value);
             } else {
                 if ($key == 'expr_type' && $value == 'in-list') {
-                    $array['base_expr'] = 'NORMALIZED';
+                    $tainted = true;
                     $array['sub_tree'] = 'NORMALIZED';
                 } else {
                     if ($key == 'expr_type' && $value == 'const') {
-                        $array['base_expr'] = 'NORMALIZED';
+                        $tainted = true;
                     }
                 }
             }
         }
 
-        return $array;
+        if ($tainted) {
+            if (array_key_exists('base_expr', $array)) {
+                $array['base_expr'] = 'NORMALIZED';
+            }
+            if (array_key_exists('sub_tree', $array)) {
+//                $array['sub_tree'] = 'NORMALIZED';
+            }
+        }
+
+        return $tainted;
     }
 
     /**
@@ -186,7 +200,7 @@ class SqlProblemInspector
      */
     private function getQueryHash($normalizedSql)
     {
-        $hash = md5(serialize($normalizedSql));
+        $hash = md5(json_encode($normalizedSql));
         return $hash;
     }
 }
